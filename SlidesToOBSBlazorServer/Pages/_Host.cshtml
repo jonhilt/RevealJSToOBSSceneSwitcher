@@ -1,0 +1,65 @@
+﻿@page "/"
+@namespace SlidesToOBSBlazorServer.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>SlidesToOBSBlazorServer</title>
+    <base href="~/"/>
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css"/>
+    <link href="css/site.css" rel="stylesheet"/>
+</head>
+<body>
+<app>
+    <component type="typeof(App)" render-mode="ServerPrerendered"/>
+</app>
+
+<div id="blazor-error-ui">
+    <environment include="Staging,Production">
+        An error has occurred. This application may no longer respond until reloaded.
+    </environment>
+    <environment include="Development">
+        An unhandled exception has occurred. See browser dev tools for details.
+    </environment>
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
+
+<script src="_framework/blazor.server.js"></script>
+
+<script>
+
+window.getSlideNotes = () => {
+        document.querySelector( 'iframe' ).contentWindow.postMessage( JSON.stringify({
+              method: 'getSlideNotes'
+            }), '*' );
+}
+
+    window.ListenToSlidesEvents = (dotnetHelper) => {
+
+        window.addEventListener('message', function(event) {
+            var data = JSON.parse(event.data);
+
+            if (data.namespace === 'reveal') {
+                if (data.eventName === 'slidechanged' || data.eventName === 'ready') {
+                    getSlideNotes();
+                } else if (data.eventName === 'callback') {
+                    if (data.method === 'getSlideNotes') {
+                        dotnetHelper.invokeMethodAsync('HandleSlideNotes', data.result);
+                    }
+                }
+            }
+        });
+
+    }    
+    
+</script>
+
+</body>
+</html>

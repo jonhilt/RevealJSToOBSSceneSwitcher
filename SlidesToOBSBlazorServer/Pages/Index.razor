@@ -1,0 +1,65 @@
+﻿@page "/"
+@using SlidesToOBS
+@using System.IO
+@using OBS.WebSocket.NET
+@inject IJSRuntime JsRuntime
+
+<div>
+    <h1>1. Connect to OBS ( @(_isConnectedToOBS ? "Connected" : "Not Connected"))</h1>
+    <button @onclick="ConnectToOBS">Connect to OBS</button>
+</div>
+
+<div class="mt-4">
+    <h1>2. Maximise this presentation</h1>
+    <iframe src="//slides.com/jonhilt/hello-and-welcome/embed?postMessageEvents=true" width="460" height="340"
+            scrolling="no" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+
+</div>
+
+@code
+{
+    private ObsLocal OBS;
+    private bool _isConnectedToOBS => OBS != null;
+
+    private async Task ConnectToOBS()
+    {
+        Console.Write("Connecting to OBS...");
+        OBS = new ObsLocal();
+        await OBS.Connect();
+        Console.WriteLine("connected");
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var dotNetObjectReference = DotNetObjectReference.Create(this);
+            await JsRuntime.InvokeVoidAsync("ListenToSlidesEvents", dotNetObjectReference);
+        }
+    }
+
+    [JSInvokableAttribute("HandleSlideNotes")]
+    public async Task HandleSlideNotes(string note)
+    {
+        if (note == null)
+            return;
+
+        if (OBS == null)
+            return;
+        
+        if (note.StartsWith("OBS:"))
+        {
+            try
+            {
+                var scene = new StringReader(note).ReadLine()?.Substring(4);
+                OBS.ChangeScene(scene);
+            }
+            catch (ErrorResponseException e)
+            {
+                Console.WriteLine(note);
+                Console.WriteLine(e.Message);
+            }
+            
+        }
+    }
+}
